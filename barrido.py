@@ -203,7 +203,7 @@ def scrape(site):
 # Respaldo por RSS para periodicos que bloquean las IPs de GitHub (403)
 _EP = "https://feeds.elpais.com/mrss-s/pages/ep/site/"
 RSS = {
-    "elpais": [_EP + "elpais.com/portada"] + [_EP + "elpais.com/section/%s/portada" % s for s in ("espana", "internacional", "economia", "sociedad", "cultura", "opinion")],
+    "elpais": [_EP + "elpais.com/portada"] + [_EP + "elpais.com/section/%s/portada" % s for s in ("espana", "internacional", "economia", "sociedad", "cultura", "deportes", "opinion")],
     "cincodias": [_EP + "cincodias.elpais.com/portada"],
 }
 
@@ -250,11 +250,16 @@ def scrape_any(site):
         out = scrape(site)
     except Exception as e:
         err = e
-    if not out and site[0] in RSS:
-        out = scrape_rss(site)
-        if out:
-            return out
-    if err:
+    if site[0] in RSS:
+        # la portada a veces se lee solo en parte (bloqueos 403 intermitentes): se completa con el RSS
+        idx = {x["u"]: x for x in out}
+        for x in scrape_rss(site):
+            if x["u"] in idx:
+                if x.get("a") and not idx[x["u"]].get("a"):
+                    idx[x["u"]]["a"] = x["a"]
+            elif len(out) < MAX_ITEMS:
+                out.append(x)
+    if err and not out:
         raise err
     return out
 
