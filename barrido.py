@@ -205,6 +205,9 @@ _EP = "https://feeds.elpais.com/mrss-s/pages/ep/site/"
 RSS = {
     "elpais": [_EP + "elpais.com/portada"] + [_EP + "elpais.com/section/%s/portada" % s for s in ("espana", "internacional", "economia", "sociedad", "cultura", "deportes", "opinion")],
     "cincodias": [_EP + "cincodias.elpais.com/portada"],
+    "eleconomista": ["https://www.eleconomista.es/rss/rss-economia.php", "https://www.eleconomista.es/rss/rss-mercados.php",
+                     "https://www.eleconomista.es/rss/rss-category.php?category=tecnologia",
+                     "https://www.eleconomista.es/rss/rss-categoria.php?category=infraestructuras-servicios"],
 }
 
 def scrape_rss(site):
