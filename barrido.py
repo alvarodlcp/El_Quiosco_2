@@ -20,18 +20,18 @@ SITES = [
     ("eldiario", "elDiario.es", "https://www.eldiario.es/", "eldiario.es", r"_1_\d+\.html$"),
     ("elconfidencial", "El Confidencial", ["https://www.elconfidencial.com/", ("https://www.elconfidencial.com/opinion/", 25, "op")], "elconfidencial.com", r"/20\d\d-\d\d-\d\d/[^/]+_\d+/?$"),
     ("lavanguardia", "La Vanguardia", "https://www.lavanguardia.com/", "lavanguardia.com", r"/\d{8}/\d+/[^/]+\.html$"),
-    ("elperiodico", "El Periódico", "https://www.elperiodico.com/es/", "elperiodico.com", r"/\d{8}/[^/]+-\d+\.html$"),
-    ("20minutos", "20minutos", "https://www.20minutos.es/", "20minutos.es", r"/noticia/\d+/\d+/[^/]+/?$"),
+    ("elperiodico", "El Periódico", "https://www.elperiodico.com/es/", "elperiodico.com", r"/\d{8}/[^/]+-\d+(?:\.html)?/?$"),
+    ("20minutos", "20minutos", "https://www.20minutos.es/", "20minutos.es", r"(?:/noticia/\d+/\d+/[^/]+/?|_\d{6,9}_\d+\.html)$"),
     ("publico", "Público", "https://www.publico.es/", "publico.es", r"/[^/]+/(?:[^/]+/)*[a-z0-9-]{15,}\.html$"),
     ("okdiario", "Okdiario", "https://okdiario.com/", "okdiario.com", r"/[^/]+-\d{6,9}/?$"),
     ("elindependiente", "El Independiente", "https://www.elindependiente.com/", "elindependiente.com", r"/20\d\d/\d\d/\d\d/[^/]+/?$"),
     ("vozpopuli", "Vozpópuli", "https://www.vozpopuli.com/", "vozpopuli.com", r"/[a-z0-9-]{30,}\.html$"),
     ("theobjective", "The Objective", "https://theobjective.com/", "theobjective.com", r"/20\d\d-\d\d-\d\d/[^/]+/?$"),
     ("infolibre", "infoLibre", "https://www.infolibre.es/", "infolibre.es", r"_1_\d+\.html$"),
-    ("expansion", "Expansión", "https://www.expansion.com/", "expansion.com", r"/20\d\d/\d\d/\d\d/[0-9a-f]+\.html$"),
+    ("expansion", "Expansión", "https://www.expansion.com/", "expansion.com", r"/20\d\d/\d\d/\d\d/[^/]+\.html$"),
     ("cincodias", "Cinco Días", "https://cincodias.elpais.com/", "cincodias.elpais.com", r"/20\d\d-\d\d-\d\d/[^/]+\.html$"),
     ("eleconomista", "El Economista", "https://www.eleconomista.es/", "eleconomista.es", r"/noticias/\d+/\d\d/\d\d/"),
-    ("lavozdegalicia", "La Voz de Galicia", "https://www.lavozdegalicia.es/", "lavozdegalicia.es", r"/noticia/.+/\d{10,}\.html$"),
+    ("lavozdegalicia", "La Voz de Galicia", "https://www.lavozdegalicia.es/", "lavozdegalicia.es", r"/noticia/.+/20\d\d/\d\d/\d\d/[^/]+/[^/]+\.html?$"),
     ("elcorreo", "El Correo", "https://www.elcorreo.com/", "elcorreo.com", r"-\d{14}-n[tdi]s?\.html$"),
     ("diariodeburgos", "Diario de Burgos", "https://www.diariodeburgos.es/", "diariodeburgos.es", r"(?i)/noticia/[^/]+/.+"),
 ]
@@ -54,7 +54,7 @@ def url_date(u):
 SKIP_SECTIONS = {"podcasts", "juegos", "loterias", "horoscopo", "promociones", "suscripcion", "servicios", "tiempo", "el tiempo", "us", "america", "mexico", "argentina", "chile", "colombia"}
 
 # periodicos cuyas URLs no llevan seccion
-NO_SECTION_DOMAINS = {"diariodeburgos.es", "20minutos.es"}
+NO_SECTION_DOMAINS = {"diariodeburgos.es"}
 
 def section_of(url, domain):
     p = urlparse(url)
@@ -200,11 +200,69 @@ def scrape(site):
                     x["a"] = au
     return out
 
+# Respaldo por RSS para periodicos que bloquean las IPs de GitHub (403)
+_EP = "https://feeds.elpais.com/mrss-s/pages/ep/site/"
+RSS = {
+    "elpais": [_EP + "elpais.com/portada"] + [_EP + "elpais.com/section/%s/portada" % s for s in ("espana", "internacional", "economia", "sociedad", "cultura", "opinion")],
+    "cincodias": [_EP + "cincodias.elpais.com/portada"],
+}
+
+def scrape_rss(site):
+    sid, name, homes, domain, pat = site
+    rx = re.compile(pat)
+    out, seen = [], set()
+    for feed in RSS.get(sid, []):
+        try:
+            r = requests.get(feed, headers=UA, timeout=30)
+            r.raise_for_status()
+            soup = BeautifulSoup(r.content, "xml")
+        except Exception:
+            continue
+        for it in soup.find_all("item"):
+            l, t = it.find("link"), it.find("title")
+            u = clean(l.get_text()).split("#")[0].split("?")[0] if l else ""
+            t = clean(t.get_text()) if t else ""
+            if not u or not t or u in seen or domain not in urlparse(u).netloc or not rx.search(u) or SKIP_URL.search(u):
+                continue
+            if sid in MAX_AGE_DAYS:
+                d = url_date(u)
+                if d and (datetime.date.today() - d).days > MAX_AGE_DAYS[sid]:
+                    continue
+            sec = section_of(u, domain)
+            if sec in SKIP_SECTIONS or sec.split(" ")[0] in SKIP_SECTIONS:
+                continue
+            seen.add(u)
+            item = {"t": t[:300], "s": sec, "u": u}
+            c = it.find("creator")
+            au = clean_author(c.get_text()) if c else ""
+            if au and au.lower() not in {"el país", "el pais", "cinco días", "cinco dias"}:
+                item["a"] = au
+            if sec.startswith("opinion"):
+                item["op"] = 1
+            out.append(item)
+            if len(out) >= MAX_ITEMS:
+                return out
+    return out
+
+def scrape_any(site):
+    out, err = [], None
+    try:
+        out = scrape(site)
+    except Exception as e:
+        err = e
+    if not out and site[0] in RSS:
+        out = scrape_rss(site)
+        if out:
+            return out
+    if err:
+        raise err
+    return out
+
 def main():
     res = {"fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "periodicos": {}, "errores": {}}
     for s in SITES:
         try:
-            res["periodicos"][s[0]] = scrape(s)
+            res["periodicos"][s[0]] = scrape_any(s)
         except Exception as e:
             res["periodicos"][s[0]] = []
             res["errores"][s[0]] = str(e)[:200]
