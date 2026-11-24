@@ -1,6 +1,6 @@
 # El Quiosco — app web instalable
 
-Titulares de las portadas de El Mundo, El Confidencial, El País, ABC, La Razón, El Español, elDiario.es, La Vanguardia, El Periódico, 20minutos, Público, Okdiario, El Independiente, Vozpópuli, The Objective, infoLibre, Expansión, Cinco Días, El Economista, La Voz de Galicia, El Correo y Diario de Burgos.
+Titulares de las portadas de El Mundo, El Confidencial, El País, ABC, La Razón, El Español, elDiario.es, La Vanguardia, El Periódico, 20minutos, Público, Okdiario, El Independiente, Vozpópuli, The Objective, infoLibre, Expansión, Cinco Días, La Voz de Galicia, El Correo y Diario de Burgos.
 Al pinchar un titular se abre su copia en archive.ph (o se crea en ese momento). En El Confidencial se abre con https://smry.ai.
 
 ## Qué hay en esta carpeta
