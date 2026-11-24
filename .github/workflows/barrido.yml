@@ -1,0 +1,61 @@
+name: Barrido de portadas
+
+on:
+  schedule:
+    # Cada 30 minutos (minutos 18 y 48); el filtro de horario se aplica en el primer paso
+    - cron: "18,48 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: barrido
+  cancel-in-progress: false
+
+env:
+  # Ventana de barridos, hora de Madrid
+  INICIO: "05:48"
+  FIN: "23:48"
+
+jobs:
+  barrido:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar horario (Madrid)
+        id: horario
+        run: |
+          ahora=$(TZ=Europe/Madrid date +%H:%M)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || { [[ ! "$ahora" < "$INICIO" ]] && [[ ! "$ahora" > "$FIN" ]]; }; then
+            echo "ejecutar=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "ejecutar=no" >> "$GITHUB_OUTPUT"
+            echo "Fuera de horario ($ahora), no se hace barrido."
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.horario.outputs.ejecutar == 'si'
+
+      - uses: actions/setup-python@v5
+        if: steps.horario.outputs.ejecutar == 'si'
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        if: steps.horario.outputs.ejecutar == 'si'
+        run: pip install -r requirements.txt
+
+      - name: Barrido
+        if: steps.horario.outputs.ejecutar == 'si'
+        run: |
+          python barrido.py nuevo.json
+          mv nuevo.json portadas.json
+
+      - name: Guardar noticias
+        if: steps.horario.outputs.ejecutar == 'si'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add portadas.json
+          git diff --staged --quiet || (git commit -m "Barrido de portadas" && git push)
