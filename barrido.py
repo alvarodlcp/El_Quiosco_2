@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Barrido de portadas: extrae titular, seccion, autor y enlace de las noticias de 22 periodicos.
+"""Barrido de portadas: extrae titular, seccion, autor y enlace de las noticias de 21 periodicos.
 Salida: JSON {fecha, periodicos:{id:[{t,s,u,a?,op?}]}} en stdout o en el fichero indicado."""
 import json, re, sys, datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -30,8 +30,7 @@ SITES = [
     ("infolibre", "infoLibre", "https://www.infolibre.es/", "infolibre.es", r"_1_\d+\.html$"),
     ("expansion", "Expansión", "https://www.expansion.com/", "expansion.com", r"/20\d\d/\d\d/\d\d/[^/]+\.html$"),
     ("cincodias", "Cinco Días", "https://cincodias.elpais.com/", "cincodias.elpais.com", r"/20\d\d-\d\d-\d\d/[^/]+\.html$"),
-    ("eleconomista", "El Economista", "https://www.eleconomista.es/", "eleconomista.es", r"/noticias/\d+/\d\d/\d\d/"),
-    ("lavozdegalicia", "La Voz de Galicia", "https://www.lavozdegalicia.es/", "lavozdegalicia.es", r"/noticia/.+/20\d\d/\d\d/\d\d/[^/]+/[^/]+\.html?$"),
+        ("lavozdegalicia", "La Voz de Galicia", "https://www.lavozdegalicia.es/", "lavozdegalicia.es", r"/noticia/.+/20\d\d/\d\d/\d\d/[^/]+/[^/]+\.html?$"),
     ("elcorreo", "El Correo", "https://www.elcorreo.com/", "elcorreo.com", r"-\d{14}-n[tdi]s?\.html$"),
     ("diariodeburgos", "Diario de Burgos", "https://www.diariodeburgos.es/", "diariodeburgos.es", r"(?i)/noticia/[^/]+/.+"),
 ]
@@ -205,9 +204,6 @@ _EP = "https://feeds.elpais.com/mrss-s/pages/ep/site/"
 RSS = {
     "elpais": [_EP + "elpais.com/portada"] + [_EP + "elpais.com/section/%s/portada" % s for s in ("espana", "internacional", "economia", "sociedad", "cultura", "deportes", "opinion")],
     "cincodias": [_EP + "cincodias.elpais.com/portada"],
-    "eleconomista": ["https://www.eleconomista.es/rss/rss-economia.php", "https://www.eleconomista.es/rss/rss-mercados.php",
-                     "https://www.eleconomista.es/rss/rss-category.php?category=tecnologia",
-                     "https://www.eleconomista.es/rss/rss-categoria.php?category=infraestructuras-servicios"],
 }
 
 def scrape_rss(site):
