@@ -67,6 +67,17 @@ footer{margin-top:36px;font-size:12px;color:var(--muted);border-top:1px solid va
 #splash .name{font-family:"Source Serif 4",Georgia,serif;font-weight:700;font-size:clamp(34px,7vw,52px);letter-spacing:-.01em}
 #splash.hide{opacity:0;visibility:hidden}
 @media (prefers-reduced-motion:reduce){#splash{transition:none}}
+
+#sheetbg{position:fixed;inset:0;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+#sheetbg.on{opacity:1;pointer-events:auto}
+#sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:520px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .22s ease;z-index:51;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+#sheet.on{transform:none}
+#sheet .sh-h{font-family:"Source Serif 4",Georgia,serif;font-size:17px;font-weight:700;line-height:1.3;margin:0 0 2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#sheet .sh-p{color:var(--muted);font-size:13px;margin:0 0 12px}
+#sheet .opt{display:block;width:100%;text-align:left;text-decoration:none;color:var(--ink);background:var(--chip);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;font:inherit;font-size:16px;font-weight:600;cursor:pointer}
+#sheet .opt small{display:block;font-weight:400;font-size:12.5px;color:var(--muted);margin-top:2px}
+#sheet .opt:hover{border-color:var(--accent);color:var(--ink)}
+#sheet .cancel{width:100%;margin-top:2px;padding:12px;font-size:15px}
 </style>
 </head>
 <body>
@@ -85,7 +96,16 @@ footer{margin-top:36px;font-size:12px;color:var(--muted);border-top:1px solid va
   <select id="sec"><option value="">Todas las secciones</option></select>
 </div>
 <main id="out"><div class="empty">Cargando noticias…</div></main>
-<footer>Titulares y enlaces recogidos de las portadas. Al pinchar un titular, smry.ai abre la noticia en versión limpia; «Original» abre la noticia en la web del periódico.<br>Barridos automáticos cada 30 minutos, de 6:00 a 24:00. «Ver último barrido» muestra las noticias del último barrido guardado.</footer>
+<footer>Titulares y enlaces recogidos de las portadas. Al pinchar un titular puedes elegir cómo abrirlo: smry.ai (versión limpia), archive.ph (copia guardada), la web original o copiar el enlace.<br>Barridos automáticos cada 30 minutos, de 6:00 a 24:00. «Ver último barrido» muestra las noticias del último barrido guardado.</footer>
+</div>
+<div id="sheetbg"></div>
+<div id="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t" aria-hidden="true">
+  <p class="sh-h" id="sh-t"></p><p class="sh-p" id="sh-p"></p>
+  <a class="opt" id="o-smry" target="_blank" rel="noopener">smry.ai<small>Versión limpia, sin anuncios</small></a>
+  <a class="opt" id="o-arch" target="_blank" rel="noopener">archive.ph<small>Copia guardada; útil si smry no abre</small></a>
+  <a class="opt" id="o-orig" target="_blank" rel="noopener">Original<small>Web del periódico</small></a>
+  <button class="opt" id="o-copy" type="button">Copiar enlace<small id="o-copy-s">Copia la dirección de la noticia</small></button>
+  <button class="cancel" id="o-cancel" type="button">Cancelar</button>
 </div>
 <script>
 const PAPERS=[["elmundo","El Mundo"],["elconfidencial","El Confidencial"],["elpais","El País"],["abc","ABC"],["larazon","La Razón"],["elespanol","El Español"],["eldiario","elDiario.es"],["lavanguardia","La Vanguardia"],["elperiodico","El Periódico"],["20minutos","20minutos"],["publico","Público"],["okdiario","Okdiario"],["elindependiente","El Independiente"],["vozpopuli","Vozpópuli"],["theobjective","The Objective"],["infolibre","infoLibre"],["expansion","Expansión"],["cincodias","Cinco Días"],["lavozdegalicia","La Voz de Galicia"],["elcorreo","El Correo"],["diariodeburgos","Diario de Burgos"]];
@@ -152,6 +172,44 @@ setTimeout(hideSplash,4000);
 load().catch(()=>{$("#upd").textContent="Aún no hay barrido guardado";$("#out").innerHTML=`<div class="empty">Todavía no hay noticias guardadas.</div>`}).finally(hideSplash);
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load().catch(()=>{})});
 </script>
-<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}</script>
+<script>if("serviceWorker" in navigator){addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+// Selector de servicio al pinchar un titular
+(function(){
+  const bg=document.getElementById("sheetbg"),sh=document.getElementById("sheet");
+  let cur="";
+  const close=()=>{bg.classList.remove("on");sh.classList.remove("on");sh.setAttribute("aria-hidden","true")};
+  function open(u,t,p){
+    cur=u;
+    document.getElementById("sh-t").textContent=t;
+    document.getElementById("sh-p").textContent=p;
+    document.getElementById("o-smry").href="https://smry.ai/"+u;
+    document.getElementById("o-arch").href="https://archive.ph/submit/?url="+encodeURIComponent(u);
+    document.getElementById("o-orig").href=u;
+    document.getElementById("o-copy-s").textContent="Copia la dirección de la noticia";
+    bg.classList.add("on");sh.classList.add("on");sh.setAttribute("aria-hidden","false");
+  }
+  document.addEventListener("click",e=>{
+    const a=e.target.closest&&e.target.closest("a.tl");
+    if(!a)return;
+    const it=a.closest(".item"),o=it&&it.querySelector("a.orig");
+    if(!o)return;
+    e.preventDefault();
+    const paper=(PAPERS.find(x=>x[0]===state.tab)||[])[1]||"";
+    open(o.href,(a.querySelector("h2")||{}).textContent||"",paper);
+  });
+  ["o-smry","o-arch","o-orig"].forEach(id=>document.getElementById(id).addEventListener("click",()=>setTimeout(close,150)));
+  document.getElementById("o-copy").addEventListener("click",async()=>{
+    let ok=false;
+    try{await navigator.clipboard.writeText(cur);ok=true}catch(e){
+      try{const ta=document.createElement("textarea");ta.value=cur;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();ok=document.execCommand("copy");ta.remove()}catch(_){}
+    }
+    document.getElementById("o-copy-s").textContent=ok?"¡Copiado!":"No se pudo copiar";
+    if(ok)setTimeout(close,700);
+  });
+  document.getElementById("o-cancel").addEventListener("click",close);
+  bg.addEventListener("click",close);
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+})();
+</script>
 </body>
 </html>
