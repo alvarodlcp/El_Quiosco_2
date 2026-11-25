@@ -85,7 +85,7 @@ footer{margin-top:36px;font-size:12px;color:var(--muted);border-top:1px solid va
   <select id="sec"><option value="">Todas las secciones</option></select>
 </div>
 <main id="out"><div class="empty">Cargando noticias…</div></main>
-<footer>Titulares y enlaces recogidos de las portadas. Al pinchar un titular, archive.ph abre la copia guardada de la noticia o la crea en ese momento (en El Confidencial se abre con smry.ai); «Original» abre la noticia en la web del periódico.<br>Barridos automáticos cada 30 minutos, de 6:00 a 24:00. «Ver último barrido» muestra las noticias del último barrido guardado.</footer>
+<footer>Titulares y enlaces recogidos de las portadas. Al pinchar un titular, smry.ai abre la noticia en versión limpia; «Original» abre la noticia en la web del periódico.<br>Barridos automáticos cada 30 minutos, de 6:00 a 24:00. «Ver último barrido» muestra las noticias del último barrido guardado.</footer>
 </div>
 <script>
 const PAPERS=[["elmundo","El Mundo"],["elconfidencial","El Confidencial"],["elpais","El País"],["abc","ABC"],["larazon","La Razón"],["elespanol","El Español"],["eldiario","elDiario.es"],["lavanguardia","La Vanguardia"],["elperiodico","El Periódico"],["20minutos","20minutos"],["publico","Público"],["okdiario","Okdiario"],["elindependiente","El Independiente"],["vozpopuli","Vozpópuli"],["theobjective","The Objective"],["infolibre","infoLibre"],["expansion","Expansión"],["cincodias","Cinco Días"],["lavozdegalicia","La Voz de Galicia"],["elcorreo","El Correo"],["diariodeburgos","Diario de Burgos"]];
@@ -94,12 +94,11 @@ try{const t=localStorage.getItem("quiosco.tab");if(t&&PAPERS.some(p=>p[0]===t))s
 if(location.hash&&PAPERS.some(p=>p[0]===location.hash.slice(1)))state.tab=location.hash.slice(1);
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const arch=u=>"https://archive.ph/submit/?url="+encodeURIComponent(u);
+const arch=u=>"https://smry.ai/"+u;
 const safeUrl=u=>/^https:\/\/[a-z0-9.-]+\.(es|com)\//i.test(u||"")?u:null;
 function fmt(iso){if(!iso)return"";const d=new Date(iso);if(isNaN(d))return"";return d.toLocaleString("es-ES",{weekday:"long",day:"numeric",month:"long",hour:"2-digit",minute:"2-digit",timeZone:"Europe/Madrid"})}
 function items(){return (state.data[state.tab]?.items||[]).filter(x=>safeUrl(x.u)&&x.t)}
-// periodicos que se abren con otro servicio distinto de archive.ph
-const ALT={elconfidencial:u=>"https://smry.ai/"+u};
+const ALT={};
 function card(x,cls=""){const f=ALT[state.tab]||arch;return `<div class="item ${cls}"><a class="tl" href="${esc(f(x.u))}" target="_blank" rel="noopener"><div class="sec">${esc(x.s||"")}</div><h2>${esc(x.t)}</h2></a><div class="by">${x.a?`<span class="au">${esc(x.a)}</span>`:""}<a class="orig" href="${esc(x.u)}" target="_blank" rel="noopener" title="Abrir la noticia en la web del periódico">Original ↗</a></div></div>`}
 function renderTabs(){
   $("#tabs").innerHTML=PAPERS.map(([id,n])=>{const c=(state.data[id]?.items||[]).length;return `<button class="tab" role="tab" aria-selected="${id===state.tab}" data-id="${id}">${esc(n)}${c?`<span class="n">${c}</span>`:""}</button>`}).join("");
