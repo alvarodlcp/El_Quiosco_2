@@ -1,5 +1,5 @@
 // Service worker minimo: la app se puede abrir sin conexion con el ultimo barrido descargado.
-const CACHE = "elquiosco-v4";
+const CACHE = "elquiosco-v5";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/favicon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL))); self.skipWaiting(); });
 self.addEventListener("activate", e => {
